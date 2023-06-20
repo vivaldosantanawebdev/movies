@@ -1,5 +1,17 @@
 <?php
 require "data.php";
+
+function sanitize($data) {
+  return array_map(function ($value) {
+    return htmlspecialchars(stripslashes(trim($value)));
+  }, $data);
+
+  if ($_SERVER['REQUEST_METHOD'] === 'POST'){
+    $movie_title = $_POST['movie_title'];
+    if (empty($movie_title)){
+      echo 'Movie Title is required';
+    }
+  }
 ?>
 
 <!DOCTYPE html>
@@ -19,9 +31,9 @@ require "data.php";
     <h2 class="form-title">New Movie</h2>
 
     <form class="form" method="post" action="index.php">
-      <input type="text" class="form-control" name="movie_title" placeholder="Movie Title" required>
-      <input type="text" class="form-control" name="director" placeholder="Director" required>
-      <input type="number" class="form-control" name="year" placeholder="Year" required>
+      <input type="text" class="form-control" name="movie_title" placeholder="Movie Title">
+      <input type="text" class="form-control" name="director" placeholder="Director">
+      <input type="number" class="form-control" name="year" placeholder="Year">
       <select class="form-select" name="genre">
         <option value="">Select a Genre</option>
         <?php foreach ($genres as $genre) : ?>
