@@ -1,3 +1,18 @@
+<?php
+  require "data.php";
+
+  if (isset($_GET['id'])) {
+    // to avoid array into an array user "current"
+    $movie = current(array_filter($movies, function ($movie) {
+      return $movie["movie_id"] == $_GET["id"];
+    }));
+
+    if (!$movie) {
+      // go back to index.php
+      header("Location:index.php");
+    }
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,14 +26,24 @@
   <main class="main">
     <?php require "header.php"; ?>
     <h2 class="form-title">Edit Movie</h2>
+
+    <!-- Important to PREPOPULATE THE DATA -->
     <form class="form" method="post">
-      <input type="text" class="form-control" name="movie_title" placeholder="Movie Title" required value="Labyrinth">
+      <input type="text" class="form-control" name="movie_title" placeholder="Movie Title" required value="<?php echo $movie['movie_title']; ?>">
       <input type="text" class="form-control" name="director" placeholder="Director" required
-          value="Jim Henson">
+          value="<?php echo $movie['director']; ?>">
       <input type="number" class="form-control" name="year" placeholder="Year" required
-          value="1986">
-      <select class="form-control" name="genre_id">
-          <option value="1">Fantasy</option>
+          value="<?php echo $movie['year']; ?>">
+
+          <!-- Selection is different -->
+      <select class="form-select" name="genre">
+          <option value="">Select a Genre</option>
+          <?php foreach ($genres as $genre) : ?>
+            <option value="<?php echo $genre; ?>" 
+              <?php if ($genre === $movie['genre']) : ?>>selected<? endif; ?>
+              <?php echo $genre; ?>
+            </option>
+
       </select>
       <button type="submit" class="button">Update Movie</button>
     </form>
