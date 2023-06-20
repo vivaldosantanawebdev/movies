@@ -1,117 +1,151 @@
 <?php
-  function sanitize($data) {
-    return array_map(function ($value) {
-      return htmlspecialchars(stripslashes(trim($value)));
-    }, $data);
-  }
+function sanitize($data)
+{
+  return array_map(function ($value) {
+    return htmlspecialchars(stripslashes(trim($value)));
+  }, $data);
+}
 
-  // movie_title is required | fewer than 255 characters
-  // director is required | characters and spaces only
-  // year is required | numeric only
-  // genre is required | must be in the list of genres
-  function validate($movie) {
-    $fields = ['movie_title', 'director', 'year', 'genre_title'];
-    $errors = [];
-    global $genres;
+// movie_title is required | fewer than 255 characters
+// director is required | characters and spaces only
+// year is required | numeric only
+// genre is required | must be in the list of genres
+function validate($movie)
+{
+  $fields = ['movie_title', 'director', 'year', 'genre_title'];
+  $errors = [];
+  global $genres;
 
-    foreach ($fields as $field) {
-      switch ($field) {
-        case 'movie_title':
-          if (empty($movie[$field])) {
-            $errors[$field] = 'Movie title is required';
-          } else if (strlen($movie[$field]) > 255) {
-            $errors[$field] = 'Movie title must be fewer than 255 characters';
-          }
-          break;
-        case 'director':
-          if (empty($movie[$field])) {
-            $errors[$field] = 'Director is required';
-          } else if (!preg_match('/^[a-zA-Z\s]+$/', $movie[$field])) {
-            $errors[$field] = 'Director must contain only letters and spaces';
-          }
-          break;
-        case 'year':
-          if (empty($movie[$field])) {
-            $errors[$field] = 'Year is required';
-          } else if (filter_var($movie[$field], FILTER_VALIDATE_INT) === false) {
-            $errors[$field] = 'Year must contain only numbers';
-          }
-          break;
-        case 'genre_title':
-          if (empty($movie[$field])) {
-            $errors[$field] = 'Genre is required';
-          } else if (!in_array($movie[$field], $genres)) {
-            $errors[$field] = 'Genre must be in the list of genres';
-          }
-          break;
-      }
+  foreach ($fields as $field) {
+    switch ($field) {
+      case 'movie_title':
+        if (empty($movie[$field])) {
+          $errors[$field] = 'Movie title is required';
+        } else if (strlen($movie[$field]) > 255) {
+          $errors[$field] = 'Movie title must be fewer than 255 characters';
+        }
+        break;
+      case 'director':
+        if (empty($movie[$field])) {
+          $errors[$field] = 'Director is required';
+        } else if (!preg_match('/^[a-zA-Z\s]+$/', $movie[$field])) {
+          $errors[$field] = 'Director must contain only letters and spaces';
+        }
+        break;
+      case 'year':
+        if (empty($movie[$field])) {
+          $errors[$field] = 'Year is required';
+        } else if (filter_var($movie[$field], FILTER_VALIDATE_INT) === false) {
+          $errors[$field] = 'Year must contain only numbers';
+        }
+        break;
+      case 'genre_title':
+        if (empty($movie[$field])) {
+          $errors[$field] = 'Genre is required';
+        } else if (!in_array($movie[$field], $genres)) {
+          $errors[$field] = 'Genre must be in the list of genres';
+        }
+        break;
     }
-
-
-    return $errors;
   }
 
-  function getMovies () {
-    global $movies;
 
-    return $movies;
-  }
+  return $errors;
+}
 
-  function searchMovies ($search) {
-    global $movies;
+// take the movies data from the database using queries
+function getMovies()
+{
+  global $db;
+  $sql = "SELECT * FROM movies";
+  $result = $db->query($sql);
+  $movies = $result->fetchAll();
 
-    return array_filter($movies, function ($movie) use ($search) {
-      return strpos(strtolower($movie['movie_title']), strtolower($search)) !== false;
-    });
-  }
+  return $movies;
+}
 
-  function getMovie ($movie_id) {
-    global $movies;
+function searchMovies($search)
+{
+  global $db;
+  // this code below is dangerous, because of malicious injections
+  $sql = "SELECT * FROM movies WHERE movie_title LIKE '%{$search}%'";
+  $result = $db->query($sql);
+  $movies = $result->fetchAll();
 
-    return current(array_filter($movies, function ($movie) use ($movie_id) {
-      return $movie['movie_id'] == $movie_id;
-    }));
-  }
+  // this code below is better to prevent these injections. It protects
+  $sql = "SELECT * FROM movies WHERE movie_title LIKE :search";
+  $result = $db->prepare($sql);
+  $result->execute([':search' => '%' . $search . '%']);
+  $movies = $result->fetchAll();
 
-  function addMovie ($movie) {
-    global $movies;
 
-    array_push($movies, [
-      'movie_id' => end($movies)['movie_id'] + 1,
-      'movie_title' => $movie['movie_title'],
-      'director' => $movie['director'],
-      'year' => $movie['year'],
-      'genre_title' => $movie['genre_title']
-    ]);
+  return $movies;
+}
 
-    $_SESSION['movies'] = $movies;
+// this function is to see the content of the movie
+function getMovie($movie_id)
+{
+  global $db;
+  $sql = "SELECT * FROM movies 
+            JOIN genres ON movies.genre_id 
+            = genres.genre_id WHERE movie_id 
+            = :movie_id"; //this is a prepared statement
+  $result = $db->prepare($sql);
+  $result->execute([':movie_id' => $movie_id]); // this is to bind the data
+  $movie = $result->fetch();
+  return $movie;
 
-    return end($movies)['movie_id'];
-  }
 
-  function updateMovie ($movie) {
-    global $movies;
+  return current(array_filter($movies, function ($movie) use ($movie_id) {
+    return $movie['movie_id'] == $movie_id;
+  }));
+}
 
-    $movies = array_map(function ($m) use ($movie) {
-      if ($m['movie_id'] == $movie['movie_id']) {
-        return $movie;
-      }
-      return $m;
-    }, $movies);
+function addMovie($movie)
+{
+  global $db;
+  global $genres;
 
-    $_SESSION['movies'] = $movies;
+  $genre_id =  array_search($movie['genre_title'], $genres) + 1;
 
-    return $movie['movie_id'];
-  }
+  $sql = "INSERT INTO movies (movie_title, director, year, genre_id) VALUES (:movie_title, :director, :year, :genre_id)"; // : using prepared statements
+  $result = $db->prepare($sql);
+  $result->execute([
+    ':movie_title' => $movie['movie_title'],
+    ':director' => $movie['director'],
+    ':year' => $movie['year'],
+    ':genre_id' => $genre_id
+  ]);
 
-  function deleteMovie ($movie_id) {
-    global $movies;
+  //this gets the last inserted row, it only works in sql
+  return $db->lastInsertId();
+}
 
-    $movies = array_filter($movies, function ($movie) use ($movie_id) {
-      return $movie['movie_id'] != $movie_id;
-    });
+function updateMovie($movie)
+{
+  global $movies;
 
-    $_SESSION['movies'] = $movies;
+  $movies = array_map(function ($m) use ($movie) {
+    if ($m['movie_id'] == $movie['movie_id']) {
+      return $movie;
+    }
+    return $m;
+  }, $movies);
 
-    return true;
-  } 
+  $_SESSION['movies'] = $movies;
+
+  return $movie['movie_id'];
+}
+
+function deleteMovie($movie_id)
+{
+  global $movies;
+
+  $movies = array_filter($movies, function ($movie) use ($movie_id) {
+    return $movie['movie_id'] != $movie_id;
+  });
+
+  $_SESSION['movies'] = $movies;
+
+  return true;
+}
