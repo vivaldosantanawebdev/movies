@@ -53,6 +53,29 @@ function validate($movie)
   return $errors;
 }
 
+//savePoster
+// process uploaded image for movie poster
+
+function savePoster($movie_id)
+{
+  // file data $_FILES['poster']
+  $poster = $_FILES['poster'];
+  if ($poster['error'] === UPLOAD_ERR_OK) {
+    //get file extension
+    $ext = pathinfo($poster['name'], PATHINFO_EXTENSION);
+    $filename = $movie_id .'.'. $ext;
+
+    if (!file_exists('posters/')) {
+      mkdir('posters/');
+    }
+    $dest = "posters/" . $filename;
+
+    return move_uploaded_file($poster['tmp_name'], $dest);
+  }
+  return false;
+}
+
+
 // take the movies data from the database using queries
 function getMovies()
 {
@@ -117,28 +140,32 @@ function addMovie($movie)
     ':genre_id' => $genre_id
   ]);
 
-  //this gets the last inserted row, it only works in sql
-  return $db->lastInsertId();
+
+  $movie_id = $db->lastInsertId();
+  savePoster($movie_id);
+  return $movie_id;
 }
 
 function updateMovie($movie)
 {
   global $db;
-    global $genres;
+  global $genres;
 
-    $genre_id = array_search($movie['genre_title'], $genres) + 1;
+  $genre_id = array_search($movie['genre_title'], $genres) + 1;
 
-    $sql = "UPDATE movies SET movie_title = :movie_title, director = :director, year = :year, genre_id = :genre_id WHERE movie_id = :movie_id";
-    $stmt = $db->prepare($sql);
-    $stmt->execute([
-      'movie_title' => $movie['movie_title'],
-      'director' => $movie['director'],
-      'year' => $movie['year'],
-      'genre_id' => $genre_id,
-      'movie_id' => $movie['movie_id']
-    ]);
+  $sql = "UPDATE movies SET movie_title = :movie_title, director = :director, year = :year, genre_id = :genre_id WHERE movie_id = :movie_id";
+  $stmt = $db->prepare($sql);
+  $stmt->execute([
+    'movie_title' => $movie['movie_title'],
+    'director' => $movie['director'],
+    'year' => $movie['year'],
+    'genre_id' => $genre_id,
+    'movie_id' => $movie['movie_id']
+  ]);
 
-    return $movie['movie_id'];
+  savePoster($movie['movie_id']);
+
+  return $movie['movie_id'];
 }
 
 function deleteMovie($movie_id)
@@ -147,6 +174,6 @@ function deleteMovie($movie_id)
   $sql = "DELETE FROM movies WHERE movie_id = :movie_id";
   $stmt = $db->prepare($sql);
   $stmt->execute(['movie_id' => $movie_id]);
-  
+
   return $stmt->rowCount();
 }

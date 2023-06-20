@@ -31,3 +31,11 @@
   <?php endforeach; ?>
 </select>
 <div class="error text-danger"><?php echo $errors['genre_title'] ?? ''; ?></div>
+
+<input
+      type="file"
+      class="form-control"
+      name="poster"
+      accept=".jpg">
+      <!-- accept="image/*" accepts all the kinds of images -->
+      <!-- multiple> // you can upload more than one file -->
