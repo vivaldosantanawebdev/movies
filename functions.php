@@ -96,9 +96,9 @@ function getMovie($movie_id)
   return $movie;
 
 
-  return current(array_filter($movies, function ($movie) use ($movie_id) {
-    return $movie['movie_id'] == $movie_id;
-  }));
+  // return current(array_filter($movies, function ($movie) use ($movie_id) {
+  //   return $movie['movie_id'] == $movie_id;
+  // }));
 }
 
 function addMovie($movie)
