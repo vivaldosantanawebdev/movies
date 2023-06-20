@@ -123,29 +123,30 @@ function addMovie($movie)
 
 function updateMovie($movie)
 {
-  global $movies;
+  global $db;
+    global $genres;
 
-  $movies = array_map(function ($m) use ($movie) {
-    if ($m['movie_id'] == $movie['movie_id']) {
-      return $movie;
-    }
-    return $m;
-  }, $movies);
+    $genre_id = array_search($movie['genre_title'], $genres) + 1;
 
-  $_SESSION['movies'] = $movies;
+    $sql = "UPDATE movies SET movie_title = :movie_title, director = :director, year = :year, genre_id = :genre_id WHERE movie_id = :movie_id";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([
+      'movie_title' => $movie['movie_title'],
+      'director' => $movie['director'],
+      'year' => $movie['year'],
+      'genre_id' => $genre_id,
+      'movie_id' => $movie['movie_id']
+    ]);
 
-  return $movie['movie_id'];
+    return $movie['movie_id'];
 }
 
 function deleteMovie($movie_id)
 {
-  global $movies;
-
-  $movies = array_filter($movies, function ($movie) use ($movie_id) {
-    return $movie['movie_id'] != $movie_id;
-  });
-
-  $_SESSION['movies'] = $movies;
-
-  return true;
+  global $db;
+  $sql = "DELETE FROM movies WHERE movie_id = :movie_id";
+  $stmt = $db->prepare($sql);
+  $stmt->execute(['movie_id' => $movie_id]);
+  
+  return $stmt->rowCount();
 }
