@@ -1,17 +1,5 @@
 <?php
 require "data.php";
-
-function sanitize($data) {
-  return array_map(function ($value) {
-    return htmlspecialchars(stripslashes(trim($value)));
-  }, $data);
-
-  if ($_SERVER['REQUEST_METHOD'] === 'POST'){
-    $movie_title = $_POST['movie_title'];
-    if (empty($movie_title)){
-      echo 'Movie Title is required';
-    }
-  }
 ?>
 
 <!DOCTYPE html>
